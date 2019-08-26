@@ -161,21 +161,21 @@ def create_table(connection, create_table_sql):
 def createDatabaseAndTables():
     database = "/home/ubuntu/macros.db"
 
-    create_user_credentials_table = """ CREATE TABLE IF NOT EXISTS userCreds (id integer PRIMARY KEY, 
-    name text NOT NULL, 
-    password text NOT NULL, 
+    create_user_credentials_table = """ CREATE TABLE IF NOT EXISTS userCreds (id integer PRIMARY KEY,
+    name text NOT NULL,
+    password text NOT NULL,
     email text NOT NULL,
-    protein integer NOT NULL, 
-    carbs integer NOT NULL, 
-    fats integer NOT NULL, 
-    token text NOT NULL, 
-    token_issue_date date NOT NULL, 
+    protein integer NOT NULL,
+    carbs integer NOT NULL,
+    fats integer NOT NULL,
+    token text NOT NULL,
+    token_issue_date date NOT NULL,
     token_expiry_date date NOT NULL); """
 
-    create_progress_table = """ CREATE TABLE IF NOT EXISTS dailyProgress (id integer PRIMARY KEY, 
-    protein integer NOT NULL, 
-    carbs integer NOT NULL, 
-    fats integer NOT NULL, 
+    create_progress_table = """ CREATE TABLE IF NOT EXISTS dailyProgress (id integer PRIMARY KEY,
+    protein integer NOT NULL,
+    carbs integer NOT NULL,
+    fats integer NOT NULL,
     user_id integer NOT NULL,
     FOREIGN KEY (user_id) REFERENCES userCreds (id)); """
 
@@ -231,16 +231,16 @@ def registration():
             today = datetime.now()
             today_plus_seven = today + timedelta(days = 7)
             unique_id = uuid.uuid4().__str__()
-            
+
             # create a user record
-            userRecord = (userRegistrationData.name, 
-            	userRegistrationData.password, 
-            	userRegistrationData.email, 
-            	int(userRegistrationData.protein), 
-            	int(userRegistrationData.carbs), 
-            	int(userRegistrationData.fats), 
-            	unique_id, 
-            	today.__str__(), 
+            userRecord = (userRegistrationData.name,
+            	userRegistrationData.password,
+            	userRegistrationData.email,
+            	int(userRegistrationData.protein),
+            	int(userRegistrationData.carbs),
+            	int(userRegistrationData.fats),
+            	unique_id,
+            	today.__str__(),
             	today_plus_seven.__str__())
 
             # insert user record
@@ -254,7 +254,7 @@ def registration():
 
 @app.route("/")
 def hello():
-    return "Welcome to the testing server - Mohammed Bokhari<br><br>There are three available routes:<br><br>13.235.198.182/getJSONTest [GET only]<br>13.235.198.182/getUniqueID [POST only]<br>13.235.198.182/ [GET only]<br><br>Build the Android app using Kotlin"
+    return "Welcome to the testing server - Mohammed Bokhari<br><br>There are three available routes:<br><br>35.154.196.173/getJSONTest [GET only]<br>35.154.196.173/getUniqueID [POST only]<br>35.154.196.173/ [GET only]<br><br>Build the Android app using Kotlin"
 # -----------------------------------------------------------------------------------------#
 
 # MAIN
@@ -263,4 +263,3 @@ if __name__ == "__main__":
     createDatabaseAndTables()
     app.run("172.26.3.65", "80")
 # -----------------------------------------------------------------------------------------#
-     
