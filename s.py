@@ -91,7 +91,6 @@ def userExistsLogin(userData):
 # ROUTE METHODS ( SQLITE )
 # -----------------------------------------------------------------------------------------#
 def updateRecordToken(userRecord):
-
 	try:
 		database = "/home/ubuntu/macros.db"
 		conn = create_connection(database)
@@ -107,16 +106,19 @@ def updateRecordToken(userRecord):
 		return False
 
 def insertUser(userRecord):
-	database = "/home/ubuntu/macros.db"
-	conn = create_connection(database)
+    try:
+    	database = "/home/ubuntu/macros.db"
+    	conn = create_connection(database)
 
-	sql = ''' INSERT INTO userCreds(name, password, email, protein, carbs, fats, token, token_issue_date, token_expiry_date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) '''
+    	sql = ''' INSERT INTO userCreds(name, password, email, protein, carbs, fats, token, token_issue_date, token_expiry_date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) '''
 
-	cur = conn.cursor()
-	cur.execute(sql, userRecord)
-	conn.commit()
+    	cur = conn.cursor()
+    	cur.execute(sql, userRecord)
+    	conn.commit()
+        return cur.lastrowid
 
-	return cur.lastrowid
+    except Error as e:
+    	return None
 
 def select_user_login(connection, userData):
 	cursor = connection.cursor()
