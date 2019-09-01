@@ -39,6 +39,20 @@ class RegisterCredentials(object):
     token = ""
     token_expiry = ""
     token_issue = ""
+
+class LoginData(object):
+	def __init__(self, ids, email, protein_goal, carbs_goal, fats_goal, protein_progress, carbs_progress, fats_progress):
+		self.id = ids
+		self.email = email
+		self.protein_goal = protein_goal
+		self.carbs_goal = carbs_goal
+		self.fats_goal = fats_goal
+		self.protein_progress = protein_progress
+		self.carbs_progress = carbs_progress
+		self.fats_progress = fats_progress
+
+	def toJSON(self):
+		return json.dumps(self.__dict__)
 # -----------------------------------------------------------------------------------------#
 
 # ROUTE METHODS ( NON SQLITE )
@@ -105,6 +119,21 @@ def updateRecordToken(userRecord):
 	except Error as e:
 		return False
 
+def insertDailyDefaults(userData):
+	try:
+		database = "/home/ubuntu/macros.db"
+		conn = create_connection(database)
+
+		sql = ''' INSERT INTO dailyProgress(protein, carbs, fats, user_id) VALUES (?, ?, ?, ?) '''
+
+		cur = conn.cursor()
+		cur.execute(sql, userData)
+		conn.commit()
+		return cur.lastrowid
+
+	except Error as e:
+		return None
+
 def insertUser(userRecord):
     try:
     	database = "/home/ubuntu/macros.db"
@@ -119,6 +148,59 @@ def insertUser(userRecord):
 
     except Error as e:
     	return None
+
+def select_goal_info(userData):
+	database = "/home/ubuntu/macros.db"
+	connection = create_connection(database)
+
+	with connection:
+		cursor = connection.cursor()
+		cursor.execute("SELECT protein, carbs, fats FROM userCreds WHERE email like ? AND password like ?", ("%" + userData.email + "%", "%" + userData.password + "%"))
+
+		rows = cursor.fetchall()
+		myList = []
+
+		for protein, carbs, fat in rows:
+			myList.append(protein)
+			myList.append(carbs)
+			myList.append(fat)
+
+		return myList
+
+def select_user_id(userData):
+	database = "/home/ubuntu/macros.db"
+	connection = create_connection(database)
+
+	with connection:
+		cursor = connection.cursor()
+		cursor.execute("SELECT id FROM userCreds WHERE email like ? AND password like ?", ("%" + userData.email + "%", "%" + userData.password + "%"))
+
+		rows = cursor.fetchone()
+
+		return rows
+
+def select_progress_info(userData):
+	user_id = select_user_id(userData)[0]
+
+	database = "/home/ubuntu/macros.db"
+	connection = create_connection(database)
+
+	if user_id != None:
+		with connection:
+			cursor = connection.cursor()
+			cursor.execute("SELECT protein, carbs, fats FROM dailyProgress WHERE user_id=?", (user_id,))
+
+			rows = cursor.fetchall()
+			myList = []
+
+			for protein, carbs, fats in rows:
+				myList.append(protein)
+				myList.append(carbs)
+				myList.append(fats)
+
+			return myList
+	else:
+		return None
 
 def select_user_login(connection, userData):
 	cursor = connection.cursor()
@@ -214,7 +296,12 @@ def login():
 			updateRecord = (unique_id, today.__str__(), today_plus_seven.__str__(), userLoginData.email)
 
 			if updateRecordToken(updateRecord) == True:
-				return unique_id
+				getGoalInfo = select_goal_info(userLoginData);
+				getProgressInfo = select_progress_info(userLoginData)
+
+				if getGoalInfo != None and getProgressInfo != None:
+					loginData = LoginData(unique_id, userLoginData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+					return loginData.toJSON()
 			else:
 				return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
         else:
@@ -249,8 +336,18 @@ def registration():
             if insertUser(userRecord) == None:
             	return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
             else:
-            	# on successful insertion, return the unique ID
-            	return unique_id
+            	user_id = select_user_id(userRegistrationData)
+            	dailyProgressUserRecord = (0, 0, 0, user_id[0])
+            	
+            	if(insertDailyDefaults(dailyProgressUserRecord) == None):
+            		return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+            	else:
+            		getGoalInfo = select_goal_info(userRegistrationData);
+            		getProgressInfo = select_progress_info(userRegistrationData)
+
+            		if getGoalInfo != None and getProgressInfo != None:
+            			loginData = LoginData(unique_id, userRegistrationData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+            			return loginData.toJSON()
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
