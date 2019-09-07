@@ -124,7 +124,7 @@ def insertDailyDefaults(userData):
 		database = "/home/ubuntu/macros.db"
 		conn = create_connection(database)
 
-		sql = ''' INSERT INTO dailyProgress(protein, carbs, fats, user_id) VALUES (?, ?, ?, ?) '''
+		sql = ''' INSERT INTO dailyProgress(protein, carbs, fats, dates, user_id) VALUES (?, ?, ?, ?, ?) '''
 
 		cur = conn.cursor()
 		cur.execute(sql, userData)
@@ -179,7 +179,7 @@ def select_user_id(userData):
 
 		return rows
 
-def select_progress_info(userData):
+def select_progress_info(userData, today):
 	user_id = select_user_id(userData)[0]
 
 	database = "/home/ubuntu/macros.db"
@@ -188,7 +188,7 @@ def select_progress_info(userData):
 	if user_id != None:
 		with connection:
 			cursor = connection.cursor()
-			cursor.execute("SELECT protein, carbs, fats FROM dailyProgress WHERE user_id=?", (user_id,))
+			cursor.execute("SELECT protein, carbs, fats FROM dailyProgress WHERE user_id like ? AND dates like ?", ("%" + userData.email + "%", "%" + today + "%"))
 
 			rows = cursor.fetchall()
 			myList = []
@@ -260,6 +260,7 @@ def createDatabaseAndTables():
     protein integer NOT NULL,
     carbs integer NOT NULL,
     fats integer NOT NULL,
+    dates text NOT NULL,
     user_id integer NOT NULL,
     FOREIGN KEY (user_id) REFERENCES userCreds (id)); """
 
@@ -297,7 +298,7 @@ def login():
 
 			if updateRecordToken(updateRecord) == True:
 				getGoalInfo = select_goal_info(userLoginData);
-				getProgressInfo = select_progress_info(userLoginData)
+				getProgressInfo = select_progress_info(userLoginData, today.__str__())
 
 				if getGoalInfo != None and getProgressInfo != None:
 					loginData = LoginData(unique_id, userLoginData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
@@ -337,13 +338,13 @@ def registration():
             	return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
             else:
             	user_id = select_user_id(userRegistrationData)
-            	dailyProgressUserRecord = (0, 0, 0, user_id[0])
-            	
+            	dailyProgressUserRecord = (0, 0, 0, today.__str__(),user_id[0])
+
             	if(insertDailyDefaults(dailyProgressUserRecord) == None):
             		return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
             	else:
             		getGoalInfo = select_goal_info(userRegistrationData);
-            		getProgressInfo = select_progress_info(userRegistrationData)
+            		getProgressInfo = select_progress_info(userRegistrationData, today.__str__())
 
             		if getGoalInfo != None and getProgressInfo != None:
             			loginData = LoginData(unique_id, userRegistrationData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
