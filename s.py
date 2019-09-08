@@ -275,6 +275,16 @@ def createDatabaseAndTables():
 # -----------------------------------------------------------------------------------------#
 # ROUTES
 # -----------------------------------------------------------------------------------------#
+@app.route("/getDailyProgress", methods=['POST'])
+def getDailyProgress():
+    if(request.method == 'POST'):
+        # get email/password/token in object format
+        # compare received token with DB token expiry date - if not expired, proceed. Else, refuse.
+        # return the new token + the dailyProgress values
+        print("it works")
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
 @app.route("/getJSONTest", methods = ['GET'])
 def jsonifiedDataTest():
     if request.method == 'GET':
