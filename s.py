@@ -40,6 +40,11 @@ class RegisterCredentials(object):
     token_expiry = ""
     token_issue = ""
 
+class FetchCredentials(object):
+    email = ""
+    password = ""
+    token = ""
+
 class LoginData(object):
     def __init__(self, ids, email, protein_goal, carbs_goal, fats_goal, protein_progress, carbs_progress, fats_progress):
         self.id = ids
@@ -80,6 +85,15 @@ def convertToObjectFromJsonRegister(data):
         user.fats = loadedJson["fats"]
 
         return user
+
+def convertToObjectFromJsonFetch(data):
+    user = FetchCredentials()
+    loadedJson = json.loads(data)
+    user.email = loadedJson["email"]
+    user.password = loadedJson["password"]
+    user.token = loadedJson["token"]
+
+    return user
 
 def userExistsRegister(userData):
     database = "/home/ubuntu/macros.db"
@@ -281,7 +295,7 @@ def getDailyProgress():
         # get email/password/token in object format
         # compare received token with DB token expiry date - if not expired, proceed. Else, refuse.
         # return the new token + the dailyProgress values
-        print("it works")
+        userFetchData = convertToObjectFromJsonFetch(request.get_data().decode("utf-8"))
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
