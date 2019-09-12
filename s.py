@@ -45,6 +45,15 @@ class FetchCredentials(object):
     password = ""
     token = ""
 
+class FetchData(object):
+    def __init__(self, protein_progress, carbs_progress, fats_progress):
+        self.protein_progress = protein_progress
+        self.carbs_progress = carbs_progress
+        self.fats_progress = fats_progress
+
+    def toJSON(self):
+        return json.dumps(self.__dict__)
+
 class LoginData(object):
     def __init__(self, ids, email, protein_goal, carbs_goal, fats_goal, protein_progress, carbs_progress, fats_progress):
         self.id = ids
@@ -62,6 +71,15 @@ class LoginData(object):
 
 # ROUTE METHODS ( NON SQLITE )
 # -----------------------------------------------------------------------------------------#
+def checkDate(token_expiry_unformat):
+    token_expiry_formatted = token_expiry_unformat[0]
+    expiry_datetime = datetime.strptime(token_expiry_formatted, "%Y-%m-%d %H:%M:%S.%f")
+
+    if expiry_datetime > datetime.now():
+        return True
+    else:
+        return False
+
 def convertToObjectFromJsonLogin(data, headers):
     user = LoginCredentials()
     loadedJson = json.loads(data)
@@ -91,7 +109,6 @@ def convertToObjectFromJsonFetch(data):
     loadedJson = json.loads(data)
     user.email = loadedJson["email"]
     user.password = loadedJson["password"]
-    user.token = loadedJson["token"]
 
     return user
 
@@ -123,7 +140,7 @@ def updateRecordToken(userRecord):
         database = "/home/ubuntu/macros.db"
         conn = create_connection(database)
 
-        sql = ''' UPDATE userCreds SET token = ?, token_expiry_date = ?, token_issue_date = ? WHERE email = ?'''
+        sql = ''' UPDATE userCreds SET token = ?, token_issue_date = ?, token_expiry_date = ? WHERE email = ?'''
 
         cur = conn.cursor()
         cur.execute(sql, userRecord)
@@ -191,6 +208,17 @@ def select_user_id(userData):
 
         rows = cursor.fetchone()
 
+        return rows
+
+def select_token_expiry(userFetchData):
+    database = "/home/ubuntu/macros.db"
+    connection = create_connection(database)
+
+    with connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT token_expiry_date FROM userCreds WHERE email like ? AND password like ?", ("%" + userFetchData.email + "%", "%" + userFetchData.password + "%"))
+
+        rows = cursor.fetchone()
         return rows
 
 def select_progress_info(userData, today):
@@ -271,9 +299,9 @@ def createDatabaseAndTables():
     token_expiry_date date NOT NULL); """
 
     create_progress_table = """ CREATE TABLE IF NOT EXISTS dailyProgress (id integer PRIMARY KEY,
-    protein integer NOT NULL,
-    carbs integer NOT NULL,
-    fats integer NOT NULL,
+    protein integer NOT NULL DEFAULT 0,
+    carbs integer NOT NULL DEFAULT 0,
+    fats integer NOT NULL DEFAULT 0,
     dates text NOT NULL,
     user_id integer NOT NULL,
     FOREIGN KEY (user_id) REFERENCES userCreds (id)); """
@@ -296,6 +324,59 @@ def getDailyProgress():
         # compare received token with DB token expiry date - if not expired, proceed. Else, refuse.
         # return the new token + the dailyProgress values
         userFetchData = convertToObjectFromJsonFetch(request.get_data().decode("utf-8"))
+        tokenExpiryDate = select_token_expiry(userFetchData)
+
+        if tokenExpiryDate != None:
+            # check token expiry date with today's date
+            if(checkDate(tokenExpiryDate)):
+                today = datetime.now()
+                getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
+
+                if getProgressInfo != []:
+                    fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                    return fetchData.toJSON()
+                else:
+                    user_id = select_user_id(userFetchData)
+                    dailyProgressUserRecord = (0, 0, 0, today.strftime('%Y-%m-%d').__str__(), user_id[0])
+
+                    if(insertDailyDefaults(dailyProgressUserRecord) == None):
+                        return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                    else:
+                        getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
+
+                        if getProgressInfo != []:
+                            fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                            return fetchData.toJSON()
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+            else:
+                unique_id = uuid.uuid4().__str__()
+                today = datetime.now()
+                today_plus_seven = today + timedelta(days = 7)
+                updateRecord = (unique_id, today.__str__(), today_plus_seven.__str__(), userFetchData.email)
+
+                if updateRecordToken(updateRecord) == True:
+                    getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
+
+                    if getProgressInfo != []:
+                        fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                        return fetchData.toJSON()
+                    else:
+                        user_id = select_user_id(userFetchData)
+                        dailyProgressUserRecord = (0, 0, 0, today.strftime('%Y-%m-%d').__str__(), user_id[0])
+
+                        if(insertDailyDefaults(dailyProgressUserRecord) == None):
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                        else:
+                            getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
+
+                            if getProgressInfo != []:
+                                fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                                return fetchData.toJSON()
+                            else:
+                                jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                else:
+                    return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
@@ -324,9 +405,24 @@ def login():
                 getGoalInfo = select_goal_info(userLoginData);
                 getProgressInfo = select_progress_info(userLoginData, today.strftime('%Y-%m-%d').__str__())
 
-                if getGoalInfo != None and getProgressInfo != None:
-                    loginData = LoginData(unique_id, userLoginData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                    return loginData.toJSON()
+                if getGoalInfo != []:
+                    if getProgressInfo != []:
+                        loginData = LoginData(unique_id, userLoginData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                        return loginData.toJSON()
+                    else:
+                        user_id = select_user_id(userLoginData)
+                        dailyProgressUserRecord = (0, 0, 0, today.strftime('%Y-%m-%d').__str__(),user_id[0])
+
+                        if(insertDailyDefaults(dailyProgressUserRecord) == None):
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                        else:
+                            getProgressInfo = select_progress_info(userLoginData, today.strftime('%Y-%m-%d').__str__())
+
+                            if getProgressInfo != []:
+                                loginData = LoginData(unique_id, userLoginData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                                return loginData.toJSON()
+                            else:
+                                jsonify({"message": "ERROR: Internal Server Database Error."}), 500
             else:
                 return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
         else:
@@ -370,9 +466,11 @@ def registration():
                     getGoalInfo = select_goal_info(userRegistrationData);
                     getProgressInfo = select_progress_info(userRegistrationData, today.strftime('%Y-%m-%d').__str__())
 
-                    if getGoalInfo != None and getProgressInfo != None:
+                    if getGoalInfo != [] and getProgressInfo != []:
                         loginData = LoginData(unique_id, userRegistrationData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
                         return loginData.toJSON()
+                    else:
+                        jsonify({"message": "ERROR: Internal Server Database Error."}), 500
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
