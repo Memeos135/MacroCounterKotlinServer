@@ -57,6 +57,7 @@ class FetchData(object):
 class LoginData(object):
     def __init__(self, ids, email, protein_goal, carbs_goal, fats_goal, protein_progress, carbs_progress, fats_progress):
         self.id = ids
+        self.name = name
         self.email = email
         self.protein_goal = protein_goal
         self.carbs_goal = carbs_goal
@@ -317,6 +318,20 @@ def createDatabaseAndTables():
 # -----------------------------------------------------------------------------------------#
 # ROUTES
 # -----------------------------------------------------------------------------------------#
+@app.route("/postGoalUpdate", methods=['POST'])
+def postGoalUpdate():
+    if(request.method == 'POST'):
+        print("ON HOLD - POST GOAL UPDATE")
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
+@app.route("/postDailyProgress", methods=['POST'])
+def postDailyProgress():
+    if(request.method == 'POST'):
+        print("ON HOLD - POST DAILY PROGRESS")
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
 @app.route("/getDailyProgress", methods=['POST'])
 def getDailyProgress():
     if(request.method == 'POST'):
