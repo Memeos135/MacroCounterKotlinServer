@@ -57,7 +57,6 @@ class FetchData(object):
 class LoginData(object):
     def __init__(self, ids, email, protein_goal, carbs_goal, fats_goal, protein_progress, carbs_progress, fats_progress):
         self.id = ids
-        self.name = name
         self.email = email
         self.protein_goal = protein_goal
         self.carbs_goal = carbs_goal
@@ -318,6 +317,13 @@ def createDatabaseAndTables():
 # -----------------------------------------------------------------------------------------#
 # ROUTES
 # -----------------------------------------------------------------------------------------#
+@app.route("/getSpecificDayProgress", methods=['POST'])
+def getSpecificDayProgress():
+    if(request.method == 'POST'):
+        print("ON HOLD - GET SPECIFIC DAY")
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
 @app.route("/postGoalUpdate", methods=['POST'])
 def postGoalUpdate():
     if(request.method == 'POST'):
