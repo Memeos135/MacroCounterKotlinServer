@@ -45,6 +45,13 @@ class FetchCredentials(object):
     password = ""
     token = ""
 
+class SpecificCredentials(object):
+    email = ""
+    password = ""
+    year = ""
+    month = ""
+    day = ""
+
 class FetchData(object):
     def __init__(self, protein_progress, carbs_progress, fats_progress):
         self.protein_progress = protein_progress
@@ -111,6 +118,17 @@ def convertToObjectFromJsonFetch(data):
     user.password = loadedJson["password"]
 
     return user
+
+def convertToObjectFromJsonSpecific(data):
+    specificData = SpecificCredentials()
+    loadedJson = json.loads(data)
+    specificData.email = loadedJson["email"]
+    specificData.password = loadedJson["password"]
+    specificData.year = loadedJson["year"]
+    specificData.month = loadedJson["month"]
+    specificData.day = loadedJson["day"]
+
+    return specificData
 
 def userExistsRegister(userData):
     database = "/home/ubuntu/macros.db"
@@ -320,7 +338,62 @@ def createDatabaseAndTables():
 @app.route("/getSpecificDayProgress", methods=['POST'])
 def getSpecificDayProgress():
     if(request.method == 'POST'):
-        print("ON HOLD - GET SPECIFIC DAY")
+        userSpecificData = convertToObjectFromJsonSpecific(request.get_data().decode("utf-8"))
+        tokenExpiryDate = select_token_expiry(userSpecificData)
+
+        if tokenExpiryDate != None:
+            # check token expiry date with today's date
+            if(checkDate(tokenExpiryDate)):
+                today = datetime.now()
+
+                specificDayFormat = userSpecificData.year + "-" + userSpecificData.month + "-" + userSpecificData.day
+                getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
+
+                if getProgressInfo != []:
+                    fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                    return fetchData.toJSON()
+                else:
+                    user_id = select_user_id(userSpecificData)
+                    dailyProgressUserRecord = (0, 0, 0, specificDayFormat, user_id[0])
+
+                    if(insertDailyDefaults(dailyProgressUserRecord) == None):
+                        return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                    else:
+                        getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
+
+                        if getProgressInfo != []:
+                            fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                            return fetchData.toJSON()
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+            else:
+                unique_id = uuid.uuid4().__str__()
+                today = datetime.now()
+                today_plus_seven = today + timedelta(days = 7)
+                updateRecord = (unique_id, today.__str__(), today_plus_seven.__str__(), userSpecificData.email)
+
+                if updateRecordToken(updateRecord) == True:
+                    getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
+
+                    if getProgressInfo != []:
+                        fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                        return fetchData.toJSON()
+                    else:
+                        user_id = select_user_id(userSpecificData)
+                        dailyProgressUserRecord = (0, 0, 0, specificDayFormat, user_id[0])
+
+                        if(insertDailyDefaults(dailyProgressUserRecord) == None):
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                        else:
+                            getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
+
+                            if getProgressInfo != []:
+                                fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
+                                return fetchData.toJSON()
+                            else:
+                                jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                else:
+                    return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
@@ -334,7 +407,7 @@ def postGoalUpdate():
 @app.route("/postDailyProgress", methods=['POST'])
 def postDailyProgress():
     if(request.method == 'POST'):
-        print("ON HOLD - POST DAILY PROGRESS")
+        print(request.get_data().decode("utf-8"))
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
