@@ -204,6 +204,7 @@ def updateRecordToken(userRecord):
 
         return True
     except Error as e:
+        print(e)
         return False
 
 def updateGoalMacros(userRecord):
@@ -218,6 +219,52 @@ def updateGoalMacros(userRecord):
 
         return True
     except Error as e:
+        print(e)
+        return False
+
+def update_protein(updateRecord):
+    try:
+        database = "/home/ubuntu/macros.db"
+        conn = create_connection(database)
+
+        sql = ''' UPDATE dailyProgress SET protein = ? WHERE dates = ? AND user_id = ?'''
+        cur = conn.cursor()
+        cur.execute(sql, updateRecord)
+        conn.commit()
+
+        return True
+    except Error as e:
+        print(e)
+        return False
+
+def update_carbs(updateRecord):
+    try:
+        database = "/home/ubuntu/macros.db"
+        conn = create_connection(database)
+
+        sql = ''' UPDATE dailyProgress SET carbs = ? WHERE dates = ? AND user_id = ?'''
+        cur = conn.cursor()
+        cur.execute(sql, updateRecord)
+        conn.commit()
+
+        return True
+    except Error as e:
+        print(e)
+        return False
+
+def update_fats(updateRecord):
+    try:
+        database = "/home/ubuntu/macros.db"
+        conn = create_connection(database)
+
+        sql = ''' UPDATE dailyProgress SET fats = ? WHERE dates = ? AND user_id = ?'''
+        cur = conn.cursor()
+        cur.execute(sql, updateRecord)
+        conn.commit()
+
+        return True
+    except Error as e:
+        print(e)
         return False
 
 def insert_protein(record):
@@ -233,6 +280,7 @@ def insert_protein(record):
         return cur.lastrowid
 
     except Error as e:
+        print(e)
         return None
 
 def insert_carbs(record):
@@ -248,6 +296,7 @@ def insert_carbs(record):
         return cur.lastrowid
 
     except Error as e:
+        print(e)
         return None
 
 def insert_fats(record):
@@ -263,6 +312,7 @@ def insert_fats(record):
         return cur.lastrowid
 
     except Error as e:
+        print(e)
         return None
 
 def select_protein(category, date, user_id):
@@ -271,10 +321,9 @@ def select_protein(category, date, user_id):
 
     with connection:
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM dailyProgress WHERE dates like ? AND user_id like ?", ("%" + date + "%", user_id))
+        cursor.execute("SELECT protein FROM dailyProgress WHERE dates like ? AND user_id like ?", ("%" + date + "%", user_id))
 
         rows = cursor.fetchone()
-        print(rows)
 
         return rows
 
@@ -315,6 +364,7 @@ def insertUser(userRecord):
         return cur.lastrowid
 
     except Error as e:
+        print(e)
         return None
 
 def select_goal_info(userData):
@@ -361,8 +411,6 @@ def select_token_expiry(userFetchData):
 def select_progress_info(userData, today):
     user_id = select_user_id(userData)[0]
 
-    print(today)
-
     database = "/home/ubuntu/macros.db"
     connection = create_connection(database)
 
@@ -379,7 +427,6 @@ def select_progress_info(userData, today):
                 myList.append(carbs)
                 myList.append(fats)
 
-            print(myList)
             return myList
     else:
         return None
@@ -499,13 +546,11 @@ def postDailyProgress():
     if(request.method == 'POST'):
         updatedMacroModel = convertToObjectFromJsonDailyUpdate(request.get_data().decode("utf-8"))
         user_id = select_user_id(updatedMacroModel)
+        tokenExpiryDate = select_token_expiry(updatedMacroModel)
 
         ## FIRST CHECK IF TOKEN IS NOT EXPIRED, THEN CHECK IF MACROS EXIST FOR THIS PARTICULAR DAY
         ## IF MACROS EXIST, DO UPDATE
         ## ELSE, CREATE A NEW RECORD FOR THIS DAY AND INSERT INTO IT
-
-        userFetchData = convertToObjectFromJsonFetch(request.get_data().decode("utf-8"))
-        tokenExpiryDate = select_token_expiry(userFetchData)
 
         if tokenExpiryDate != None:
             # check token expiry date with today's date
@@ -523,7 +568,11 @@ def postDailyProgress():
                             return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
                     else:
                         # Macros exist, update the current existing macros
-                        print("EXISTS")
+                        updateProteinRecord = (int(updatedMacroModel.value), updatedMacroModel.date, user_id[0])
+                        if(update_protein(updateProteinRecord) == True):
+                            return jsonify({"response": "SUCCESSFUL: Record successfully created."}), 200
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
                 # Check what category is requested (CARBS)
                 elif(updatedMacroModel.category.lower().startswith("c")):
                     # Check if macros exist for this particular user in the requested date
@@ -536,7 +585,11 @@ def postDailyProgress():
                             return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
                     else:
                         # Macros exist, update the current existing macros
-                        print("EXISTS")
+                        updateCarbsRecord = (int(updatedMacroModel.value), updatedMacroModel.date, user_id[0])
+                        if(update_carbs(updateCarbsRecord) == True):
+                            return jsonify({"response": "SUCCESSFUL: Record successfully created."}), 200
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
                 # Check what category is requested (FATS)
                 else:
                     # Check if macros exist for this particular user in the requested date
@@ -549,7 +602,11 @@ def postDailyProgress():
                             return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
                     else:
                         # Macros exist, update the current existing macros
-                        print("EXISTS")
+                        updateFatsRecord = (int(updatedMacroModel.value), updatedMacroModel.date, user_id[0])
+                        if(update_fats(updateFatsRecord) == True):
+                            return jsonify({"response": "SUCCESSFUL: Record successfully created."}), 200
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
             else:
                 return jsonify({"message": "ERROR: Token expired."}), 401
         else:
