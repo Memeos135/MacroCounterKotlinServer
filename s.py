@@ -61,6 +61,20 @@ class FetchData(object):
     def toJSON(self):
         return json.dumps(self.__dict__)
 
+class GoalUpdateCredentials(object):
+    email = ""
+    password = ""
+    protein = ""
+    carbs = ""
+    fats = ""
+
+class MacroUpdateCredentials(object):
+    category = ""
+    value = ""
+    email = ""
+    password = ""
+    date = ""
+
 class LoginData(object):
     def __init__(self, ids, email, protein_goal, carbs_goal, fats_goal, protein_progress, carbs_progress, fats_progress):
         self.id = ids
@@ -119,6 +133,30 @@ def convertToObjectFromJsonFetch(data):
 
     return user
 
+def convertToObjectFromJsonDailyUpdate(data):
+    info = MacroUpdateCredentials()
+    loadedJson = json.loads(data)
+
+    info.category = loadedJson["category"]
+    info.value = loadedJson["updatedValue"]
+    info.email = loadedJson["email"]
+    info.password = loadedJson["password"]
+    info.date = loadedJson["date"]
+
+    return info
+
+def convertToObjectFromJsonGoalUpdate(data):
+    info = GoalUpdateCredentials()
+    loadedJson = json.loads(data)
+
+    info.email = loadedJson["email"]
+    info.password = loadedJson["password"]
+    info.protein = loadedJson["protein"]
+    info.carbs = loadedJson["carbs"]
+    info.fats = loadedJson["fats"]
+
+    return info
+
 def convertToObjectFromJsonSpecific(data):
     specificData = SpecificCredentials()
     loadedJson = json.loads(data)
@@ -168,7 +206,21 @@ def updateRecordToken(userRecord):
     except Error as e:
         return False
 
-def insertDailyDefaults(userData):
+def updateGoalMacros(userRecord):
+    try:
+        database = "/home/ubuntu/macros.db"
+        conn = create_connection(database)
+
+        sql = ''' UPDATE userCreds SET protein = ?, carbs = ?, fats = ? WHERE email = ? AND password = ?'''
+        cur = conn.cursor()
+        cur.execute(sql, userRecord)
+        conn.commit()
+
+        return True
+    except Error as e:
+        return False
+
+def insert_protein(record):
     try:
         database = "/home/ubuntu/macros.db"
         conn = create_connection(database)
@@ -176,12 +228,79 @@ def insertDailyDefaults(userData):
         sql = ''' INSERT INTO dailyProgress(protein, carbs, fats, dates, user_id) VALUES (?, ?, ?, ?, ?) '''
 
         cur = conn.cursor()
-        cur.execute(sql, userData)
+        cur.execute(sql, record)
         conn.commit()
         return cur.lastrowid
 
     except Error as e:
         return None
+
+def insert_carbs(record):
+    try:
+        database = "/home/ubuntu/macros.db"
+        conn = create_connection(database)
+
+        sql = ''' INSERT INTO dailyProgress(protein, carbs, fats, dates, user_id) VALUES (?, ?, ?, ?, ?) '''
+
+        cur = conn.cursor()
+        cur.execute(sql, record)
+        conn.commit()
+        return cur.lastrowid
+
+    except Error as e:
+        return None
+
+def insert_fats(record):
+    try:
+        database = "/home/ubuntu/macros.db"
+        conn = create_connection(database)
+
+        sql = ''' INSERT INTO dailyProgress(protein, carbs, fats, dates, user_id) VALUES (?, ?, ?, ?, ?) '''
+
+        cur = conn.cursor()
+        cur.execute(sql, record)
+        conn.commit()
+        return cur.lastrowid
+
+    except Error as e:
+        return None
+
+def select_protein(category, date, user_id):
+    database = "/home/ubuntu/macros.db"
+    connection = create_connection(database)
+
+    with connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM dailyProgress WHERE dates like ? AND user_id like ?", ("%" + date + "%", user_id))
+
+        rows = cursor.fetchone()
+        print(rows)
+
+        return rows
+
+def select_carbs(category, date, user_id):
+    database = "/home/ubuntu/macros.db"
+    connection = create_connection(database)
+
+    with connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT carbs FROM dailyProgress WHERE dates like ? AND user_id like ?", ("%" + date + "%", user_id))
+
+        rows = cursor.fetchone()
+
+        return rows
+
+def select_fats(category, date, user_id):
+    database = "/home/ubuntu/macros.db"
+    connection = create_connection(database)
+
+    with connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT fats FROM dailyProgress WHERE dates like ? AND user_id like ?", ("%" + date + "%", user_id))
+
+        rows = cursor.fetchone()
+
+        return rows
 
 def insertUser(userRecord):
     try:
@@ -242,6 +361,8 @@ def select_token_expiry(userFetchData):
 def select_progress_info(userData, today):
     user_id = select_user_id(userData)[0]
 
+    print(today)
+
     database = "/home/ubuntu/macros.db"
     connection = create_connection(database)
 
@@ -258,6 +379,7 @@ def select_progress_info(userData, today):
                 myList.append(carbs)
                 myList.append(fats)
 
+            print(myList)
             return myList
     else:
         return None
@@ -344,8 +466,6 @@ def getSpecificDayProgress():
         if tokenExpiryDate != None:
             # check token expiry date with today's date
             if(checkDate(tokenExpiryDate)):
-                today = datetime.now()
-
                 specificDayFormat = userSpecificData.year + "-" + userSpecificData.month + "-" + userSpecificData.day
                 getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
 
@@ -353,61 +473,87 @@ def getSpecificDayProgress():
                     fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
                     return fetchData.toJSON()
                 else:
-                    user_id = select_user_id(userSpecificData)
-                    dailyProgressUserRecord = (0, 0, 0, specificDayFormat, user_id[0])
-
-                    if(insertDailyDefaults(dailyProgressUserRecord) == None):
-                        return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                    else:
-                        getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
-
-                        if getProgressInfo != []:
-                            fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                            return fetchData.toJSON()
-                        else:
-                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                    return "{ \"protein_progress\": \"0\", \"carbs_progress\": \"0\", \"fats_progress\": \"0\" }"
             else:
-                unique_id = uuid.uuid4().__str__()
-                today = datetime.now()
-                today_plus_seven = today + timedelta(days = 7)
-                updateRecord = (unique_id, today.__str__(), today_plus_seven.__str__(), userSpecificData.email)
-
-                if updateRecordToken(updateRecord) == True:
-                    getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
-
-                    if getProgressInfo != []:
-                        fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                        return fetchData.toJSON()
-                    else:
-                        user_id = select_user_id(userSpecificData)
-                        dailyProgressUserRecord = (0, 0, 0, specificDayFormat, user_id[0])
-
-                        if(insertDailyDefaults(dailyProgressUserRecord) == None):
-                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                        else:
-                            getProgressInfo = select_progress_info(userSpecificData, specificDayFormat)
-
-                            if getProgressInfo != []:
-                                fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                                return fetchData.toJSON()
-                            else:
-                                jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                else:
-                    return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                return jsonify({"message": "ERROR: Token expired."}), 401
+        else:
+            return jsonify({"message": "ERROR: User not found."}), 404
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
 @app.route("/postGoalUpdate", methods=['POST'])
 def postGoalUpdate():
     if(request.method == 'POST'):
-        print("ON HOLD - POST GOAL UPDATE")
+        goalMacrosModel = convertToObjectFromJsonGoalUpdate(request.get_data().decode("utf-8"))
+        goalMacrosModelUpdate = (goalMacrosModel.protein, goalMacrosModel.carbs, goalMacrosModel.fats, goalMacrosModel.email, goalMacrosModel.password)
+
+        if(updateGoalMacros(goalMacrosModelUpdate) == True):
+            return jsonify({"response": "{ \"protein\": \"" + str(goalMacrosModel.protein) + "\", \"carbs\": \"" + str(goalMacrosModel.carbs) + "\", \"fats\": \"" + str(goalMacrosModel.fats) + "\"}"}), 200
+        else:
+            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
 @app.route("/postDailyProgress", methods=['POST'])
 def postDailyProgress():
     if(request.method == 'POST'):
-        print(request.get_data().decode("utf-8"))
+        updatedMacroModel = convertToObjectFromJsonDailyUpdate(request.get_data().decode("utf-8"))
+        user_id = select_user_id(updatedMacroModel)
+
+        ## FIRST CHECK IF TOKEN IS NOT EXPIRED, THEN CHECK IF MACROS EXIST FOR THIS PARTICULAR DAY
+        ## IF MACROS EXIST, DO UPDATE
+        ## ELSE, CREATE A NEW RECORD FOR THIS DAY AND INSERT INTO IT
+
+        userFetchData = convertToObjectFromJsonFetch(request.get_data().decode("utf-8"))
+        tokenExpiryDate = select_token_expiry(userFetchData)
+
+        if tokenExpiryDate != None:
+            # check token expiry date with today's date
+            if(checkDate(tokenExpiryDate)):
+                # Token is not expired
+                # Check what category is requested (PROTEIN)
+                if(updatedMacroModel.category.lower().startswith("p")):
+                    # Check if macros exist for this particular user in the requested date
+                    if(select_protein(updatedMacroModel.category, updatedMacroModel.date, user_id[0]) == None):
+                        # No macros exist, create a record and return a success message
+                        insertRecord = (updatedMacroModel.value, 0, 0, updatedMacroModel.date, user_id[0])
+                        if(insert_protein(insertRecord) != None):
+                            return jsonify({"response": "SUCCESSFUL: Record successfully created."}), 200
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                    else:
+                        # Macros exist, update the current existing macros
+                        print("EXISTS")
+                # Check what category is requested (CARBS)
+                elif(updatedMacroModel.category.lower().startswith("c")):
+                    # Check if macros exist for this particular user in the requested date
+                    if(select_carbs(updatedMacroModel.category, updatedMacroModel.date, user_id[0]) == None):
+                        # No macros exist, create a record and return a success message
+                        insertRecord = (0, updatedMacroModel.value, 0, updatedMacroModel.date, user_id[0])
+                        if(insert_carbs(insertRecord) != None):
+                           return jsonify({"response": "SUCCESSFUL: Record successfully created."}), 200
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                    else:
+                        # Macros exist, update the current existing macros
+                        print("EXISTS")
+                # Check what category is requested (FATS)
+                else:
+                    # Check if macros exist for this particular user in the requested date
+                    if(select_fats(updatedMacroModel.category, updatedMacroModel.date, user_id[0]) == None):
+                        # No macros exist, create a record and return a success message
+                        insertRecord = (0, 0, updatedMacroModel.value, updatedMacroModel.date, user_id[0])
+                        if(insert_fats(insertRecord) != None):
+                            return jsonify({"response": "SUCCESSFUL: Record successfully created."}), 200
+                        else:
+                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                    else:
+                        # Macros exist, update the current existing macros
+                        print("EXISTS")
+            else:
+                return jsonify({"message": "ERROR: Token expired."}), 401
+        else:
+            return jsonify({"message": "ERROR: User not found."}), 404
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
@@ -417,6 +563,7 @@ def getDailyProgress():
         # get email/password/token in object format
         # compare received token with DB token expiry date - if not expired, proceed. Else, refuse.
         # return the new token + the dailyProgress values
+        
         userFetchData = convertToObjectFromJsonFetch(request.get_data().decode("utf-8"))
         tokenExpiryDate = select_token_expiry(userFetchData)
 
@@ -430,47 +577,11 @@ def getDailyProgress():
                     fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
                     return fetchData.toJSON()
                 else:
-                    user_id = select_user_id(userFetchData)
-                    dailyProgressUserRecord = (0, 0, 0, today.strftime('%Y-%m-%d').__str__(), user_id[0])
-
-                    if(insertDailyDefaults(dailyProgressUserRecord) == None):
-                        return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                    else:
-                        getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
-
-                        if getProgressInfo != []:
-                            fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                            return fetchData.toJSON()
-                        else:
-                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                    return "{ \"protein_progress\": \"0\", \"carbs_progress\": \"0\", \"fats_progress\": \"0\" }"
             else:
-                unique_id = uuid.uuid4().__str__()
-                today = datetime.now()
-                today_plus_seven = today + timedelta(days = 7)
-                updateRecord = (unique_id, today.__str__(), today_plus_seven.__str__(), userFetchData.email)
-
-                if updateRecordToken(updateRecord) == True:
-                    getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
-
-                    if getProgressInfo != []:
-                        fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                        return fetchData.toJSON()
-                    else:
-                        user_id = select_user_id(userFetchData)
-                        dailyProgressUserRecord = (0, 0, 0, today.strftime('%Y-%m-%d').__str__(), user_id[0])
-
-                        if(insertDailyDefaults(dailyProgressUserRecord) == None):
-                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                        else:
-                            getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
-
-                            if getProgressInfo != []:
-                                fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                                return fetchData.toJSON()
-                            else:
-                                jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                else:
-                    return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                return jsonify({"message": "ERROR: Token expired."}), 401
+        else:
+            return jsonify({"message": "ERROR: User not found."}), 404
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
@@ -504,19 +615,7 @@ def login():
                         loginData = LoginData(unique_id, userLoginData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
                         return loginData.toJSON()
                     else:
-                        user_id = select_user_id(userLoginData)
-                        dailyProgressUserRecord = (0, 0, 0, today.strftime('%Y-%m-%d').__str__(),user_id[0])
-
-                        if(insertDailyDefaults(dailyProgressUserRecord) == None):
-                            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                        else:
-                            getProgressInfo = select_progress_info(userLoginData, today.strftime('%Y-%m-%d').__str__())
-
-                            if getProgressInfo != []:
-                                loginData = LoginData(unique_id, userLoginData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                                return loginData.toJSON()
-                            else:
-                                jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                        return "{ \"id\": \"" + unique_id + "\", \"email\": \"" + userLoginData.email + "\", \"protein_goal\": \"" + str(getGoalInfo[0]) +"\", \"carbs_goal\": \"" + str(getGoalInfo[1]) +"\", \"fats_goal\": \"" + str(getGoalInfo[2]) +"\",  \"protein_progress\": \"0\", \"carbs_progress\": \"0\", \"fats_progress\": \"0\" }"
             else:
                 return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
         else:
@@ -551,20 +650,7 @@ def registration():
             if insertUser(userRecord) == None:
                 return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
             else:
-                user_id = select_user_id(userRegistrationData)
-                dailyProgressUserRecord = (0, 0, 0, today.strftime('%Y-%m-%d').__str__(),user_id[0])
-
-                if(insertDailyDefaults(dailyProgressUserRecord) == None):
-                    return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
-                else:
-                    getGoalInfo = select_goal_info(userRegistrationData);
-                    getProgressInfo = select_progress_info(userRegistrationData, today.strftime('%Y-%m-%d').__str__())
-
-                    if getGoalInfo != [] and getProgressInfo != []:
-                        loginData = LoginData(unique_id, userRegistrationData.email, getGoalInfo[0], getGoalInfo[1], getGoalInfo[2], getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
-                        return loginData.toJSON()
-                    else:
-                        jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+                return "{ \"id\": \"" + unique_id + "\", \"email\": \"" + userRegistrationData.email + "\", \"protein_goal\": \"" + userRegistrationData.protein +"\", \"carbs_goal\": \"" + userRegistrationData.carbs +"\", \"fats_goal\": \"" + userRegistrationData.fats +"\",  \"protein_progress\": \"0\", \"carbs_progress\": \"0\", \"fats_progress\": \"0\" }"
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
