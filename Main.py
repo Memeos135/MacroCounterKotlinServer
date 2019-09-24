@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 # ROUTES
 # -----------------------------------------------------------------------------------------#
-@app.route("/getSpecificDayProgress", methods=['POST'])
+@app.route("/API/getSpecificDayProgress", methods=['POST'])
 def getSpecificDayProgress():
     if(request.method == 'POST'):
         userSpecificData = convertToObjectFromJsonSpecific(request.get_data().decode("utf-8"))
@@ -41,7 +41,7 @@ def getSpecificDayProgress():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/postGoalUpdate", methods=['POST'])
+@app.route("/API/postGoalUpdate", methods=['POST'])
 def postGoalUpdate():
     if(request.method == 'POST'):
         goalMacrosModel = convertToObjectFromJsonGoalUpdate(request.get_data().decode("utf-8"))
@@ -54,7 +54,7 @@ def postGoalUpdate():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/postDailyProgress", methods=['POST'])
+@app.route("/API/postDailyProgress", methods=['POST'])
 def postDailyProgress():
     if(request.method == 'POST'):
         updatedMacroModel = convertToObjectFromJsonDailyUpdate(request.get_data().decode("utf-8"))
@@ -127,7 +127,7 @@ def postDailyProgress():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/getDailyProgress", methods=['POST'])
+@app.route("/API/getDailyProgress", methods=['POST'])
 def getDailyProgress():
     if(request.method == 'POST'):
         # get email/password/token in object format
@@ -155,7 +155,7 @@ def getDailyProgress():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/getJSONTest", methods = ['GET'])
+@app.route("/API/getJSONTest", methods = ['GET'])
 def jsonifiedDataTest():
     if request.method == 'GET':
         testData = Data("Mohammed", "23", "173", "Male", "Android Developer")
@@ -164,7 +164,7 @@ def jsonifiedDataTest():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/getTokenLogin", methods = ['POST'])
+@app.route("/API/getTokenLogin", methods = ['POST'])
 def login():
     if request.method == 'POST':
         userLoginData = convertToObjectFromJsonLogin(request.get_data().decode("utf-8"), request.headers)
@@ -193,7 +193,7 @@ def login():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/signup", methods = ['POST'])
+@app.route("/API/signup", methods = ['POST'])
 def registration():
     if request.method == 'POST':
         userRegistrationData = convertToObjectFromJsonRegister(request.get_data().decode("utf-8"))
@@ -224,7 +224,7 @@ def registration():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/")
+@app.route("/API/")
 def hello():
     return "Welcome to the testing server - Mohammed Bokhari<br><br>There are three available routes:<br><br>35.154.196.173/getJSONTest [GET only]<br>35.154.196.173/getUniqueID [POST only]<br>35.154.196.173/ [GET only]<br><br>Build the Android app using Kotlin"
 # -----------------------------------------------------------------------------------------#
