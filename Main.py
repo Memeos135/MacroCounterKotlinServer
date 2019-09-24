@@ -226,7 +226,7 @@ def registration():
 
 @app.route("/API/")
 def hello():
-    return "Welcome to the testing server - Mohammed Bokhari<br><br>There are three available routes:<br><br>35.154.196.173/getJSONTest [GET only]<br>35.154.196.173/getUniqueID [POST only]<br>35.154.196.173/ [GET only]<br><br>Build the Android app using Kotlin"
+    return "Welcome to the testing server - Mohammed Bokhari<br><br>There are eight available routes:<br><br>13.232.209.99/getJSONTest<br>13.232.209.99/signup<br>13.232.209.99/getTokenLogin<br>13.232.209.99/getDailyProgress<br>13.232.209.99/postDailyProgress<br>13.232.209.99/postGoalUpdate<br>13.232.209.99/getSpecificDayProgress<br>13.232.209.99/API<br>13.232.209.99/"
 # -----------------------------------------------------------------------------------------#
 
 # MAIN
