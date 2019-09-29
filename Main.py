@@ -1,6 +1,7 @@
 from flask import Flask
 from flask import jsonify
 from flask import request
+from flask import render_template
 import json
 import uuid
 import sqlite3
@@ -227,6 +228,10 @@ def registration():
 @app.route("/API/")
 def hello():
     return "Welcome to the testing server - Mohammed Bokhari<br><br>There are eight available routes:<br><br>13.232.209.99/getJSONTest<br>13.232.209.99/signup<br>13.232.209.99/getTokenLogin<br>13.232.209.99/getDailyProgress<br>13.232.209.99/postDailyProgress<br>13.232.209.99/postGoalUpdate<br>13.232.209.99/getSpecificDayProgress<br>13.232.209.99/API<br>13.232.209.99/"
+
+@app.route("/", methods=['GET'])
+def webPage():
+    return render_template('index.html')
 # -----------------------------------------------------------------------------------------#
 
 # MAIN
