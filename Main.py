@@ -2,6 +2,8 @@ from flask import Flask
 from flask import jsonify
 from flask import request
 from flask import render_template
+import flask
+from flask import Response
 import json
 import uuid
 import sqlite3
@@ -134,7 +136,7 @@ def getDailyProgress():
         # get email/password/token in object format
         # compare received token with DB token expiry date - if not expired, proceed. Else, refuse.
         # return the new token + the dailyProgress values
-        
+
         userFetchData = convertToObjectFromJsonFetch(request.get_data().decode("utf-8"))
         tokenExpiryDate = select_token_expiry(userFetchData)
 
@@ -231,7 +233,19 @@ def hello():
 
 @app.route("/", methods=['GET'])
 def webPage():
-    return render_template('index.html')
+    if request.method == 'GET':
+        return render_template('index.html')
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
+@app.route("/processEmail", methods=['POST'])
+def sendEmail():
+    if request.method == 'POST':
+        emailObject = convertToObjectFromJsonContact(request.get_data().decode("utf-8"))
+        return jsonify({"message": "Success: Your email has been successfully received."}), 200
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
 # -----------------------------------------------------------------------------------------#
 
 # MAIN

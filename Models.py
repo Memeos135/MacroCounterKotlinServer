@@ -13,6 +13,12 @@ class Data(object):
     def toJSON(self):
         return json.dumps(self.__dict__)
 
+class ContactCredentials(object):
+    email = ""
+    name = ""
+    subject = ""
+    body = ""
+
 class LoginCredentials(object):
     email = ""
     password = ""

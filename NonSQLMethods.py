@@ -14,6 +14,16 @@ def checkDate(token_expiry_unformat):
     else:
         return False
 
+def convertToObjectFromJsonContact(data):
+    contact = ContactCredentials()
+    loadedJson = json.loads(data)
+    contact.email = loadedJson["Email"]
+    contact.name = loadedJson["Name"]
+    contact.subject = loadedJson["Subject"]
+    contact.body = loadedJson["Body"]
+
+    return contact
+
 def convertToObjectFromJsonLogin(data, headers):
     user = LoginCredentials()
     loadedJson = json.loads(data)
@@ -27,16 +37,16 @@ def convertToObjectFromJsonLogin(data, headers):
         return user
 
 def convertToObjectFromJsonRegister(data):
-        user = RegisterCredentials()
-        loadedJson = json.loads(data)
-        user.name = loadedJson["name"]
-        user.email = loadedJson["email"]
-        user.password = loadedJson["password"]
-        user.protein = loadedJson["protein"]
-        user.carbs = loadedJson["carbohydrates"]
-        user.fats = loadedJson["fats"]
+    user = RegisterCredentials()
+    loadedJson = json.loads(data)
+    user.name = loadedJson["name"]
+    user.email = loadedJson["email"]
+    user.password = loadedJson["password"]
+    user.protein = loadedJson["protein"]
+    user.carbs = loadedJson["carbohydrates"]
+    user.fats = loadedJson["fats"]
 
-        return user
+    return user
 
 def convertToObjectFromJsonFetch(data):
     user = FetchCredentials()
