@@ -1,6 +1,8 @@
 import sqlite3
 from sqlite3 import Error
 import sys
+import json
+from Models import *
 
 # ROUTE METHODS ( SQLITE )
 # -----------------------------------------------------------------------------------------#
@@ -112,6 +114,22 @@ def insert_carbs(record):
         print(e)
         return None
 
+def insert_email(record):
+    try:
+        database = "/home/ubuntu/emails.db"
+        conn = create_connection(database)
+
+        sql = ''' INSERT INTO emailTable(name, email, subject, body, dates) VALUES (?, ?, ?, ?, ?) '''
+
+        cur = conn.cursor()
+        cur.execute(sql, record)
+        conn.commit()
+        return cur.lastrowid
+
+    except Error as e:
+        print(e)
+        return None
+
 def insert_fats(record):
     try:
         database = "/home/ubuntu/macros.db"
@@ -195,6 +213,30 @@ def select_goal_info(userData):
             myList.append(protein)
             myList.append(carbs)
             myList.append(fat)
+
+        return myList
+
+def select_email():
+    database = "/home/ubuntu/emails.db"
+    connection = create_connection(database)
+
+    with connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT email, name, subject, body, dates FROM emailTable")
+
+        rows = cursor.fetchall()
+        myList = []
+
+        for row in rows:
+            print(row)
+            tempModel = EmailDatabaseModel()
+            tempModel.email = row[0]
+            tempModel.name = row[1]
+            tempModel.subject = row[2]
+            tempModel.body = row[3]
+            tempModel.dates = row[4]
+
+            myList.append(tempModel.toJSON())
 
         return myList
 
@@ -311,6 +353,24 @@ def createDatabaseAndTables():
     if connection is not None:
         create_table(connection, create_user_credentials_table)
         create_table(connection, create_progress_table)
+    else:
+        print("Error: cannot create the database connection")
+        sys.exit()
+
+def createEmailDatabaseAndTables():
+    database = "/home/ubuntu/emails.db"
+
+    create_emails_table = """ CREATE TABLE IF NOT EXISTS emailTable (id integer PRIMARY KEY,
+    name text NOT NULL,
+    email text NOT NULL,
+    subject text NOT NULL,
+    body text NOT NULL,
+    dates text NOT NULL); """
+
+    connection = create_connection(database)
+
+    if connection is not None:
+        create_table(connection, create_emails_table)
     else:
         print("Error: cannot create the database connection")
         sys.exit()

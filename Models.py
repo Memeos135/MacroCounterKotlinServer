@@ -13,6 +13,16 @@ class Data(object):
     def toJSON(self):
         return json.dumps(self.__dict__)
 
+class EmailDatabaseModel(object):
+    email = ""
+    name = ""
+    subject = ""
+    body = ""
+    dates = ""
+
+    def toJSON(self):
+        return json.dumps(self.__dict__)
+
 class ContactCredentials(object):
     email = ""
     name = ""

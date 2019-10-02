@@ -15,8 +15,10 @@ from Models import *
 from NonSQLMethods import *
 from SQLMethods import *
 from ValidationMethods import *
+from pyfcm import FCMNotification
 
 app = Flask(__name__)
+push_service = FCMNotification(api_key="AAAA9f2OtCs:APA91bFRHlfXYiYBZcITpflD6m8gj4l4-KzTA3c9r9QASgceYKpZlQGcQ6x3jjaJ5rsDOKeeIE_PkYxrlnltCHDd3gXzDoRySjBmSo1dVGmoaewe1yPIdukTVM78nok-OEUWuApQtzId")
 
 # ROUTES
 # -----------------------------------------------------------------------------------------#
@@ -242,15 +244,54 @@ def webPage():
 def sendEmail():
     if request.method == 'POST':
         emailObject = convertToObjectFromJsonContact(request.get_data().decode("utf-8"))
-        return jsonify({"message": "Success: Your email has been successfully received."}), 200
+        today = datetime.now()
+
+        emailRecord = (emailObject.name, emailObject.email, emailObject.subject, emailObject.body, today.__str__())
+
+        insertionId = insert_email(emailRecord)
+        if(insertionId != None):
+
+            with open('fcmToken.txt', 'r') as file:
+                data = file.read().replace('\n', '')
+
+            loadedJson = json.loads(data)
+
+            registration_id = loadedJson["token"].__str__()
+            message_title = "Email received from: " + emailObject.email
+            message_body = emailObject.body
+            result = push_service.notify_single_device(registration_id=registration_id, message_title=message_title, message_body=message_body)
+
+            return jsonify({"message": "Success: Your email has been successfully received."}), 200
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
+@app.route("/fcmToken", methods=['POST'])
+def saveFCMToken():
+    if request.method == 'POST':
+        file = open("fcmToken.txt", "w+")
+        file.write(request.get_data().decode("utf-8").__str__())
+        file.close()
+
+        return jsonify({"message": "SUCCESS: Token has been saved."}), 200
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
+@app.route("/getEmails", methods=['GET'])
+def getEmails():
+    if request.method == 'GET':
+        emails = select_email()
+        if(len(emails) > 0):
+            return "{ \"emailList\": " + emails.__str__() + "}"
+        else:
+            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
 # -----------------------------------------------------------------------------------------#
 
 # MAIN
 # -----------------------------------------------------------------------------------------#
 if __name__ == "__main__":
     createDatabaseAndTables()
+    createEmailDatabaseAndTables()
     app.run("172.26.4.166", "80")
 # -----------------------------------------------------------------------------------------#
