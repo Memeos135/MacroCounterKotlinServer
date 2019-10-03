@@ -228,7 +228,6 @@ def select_email():
         myList = []
 
         for row in rows:
-            print(row)
             tempModel = EmailDatabaseModel()
             tempModel.email = row[0]
             tempModel.name = row[1]
@@ -236,7 +235,8 @@ def select_email():
             tempModel.body = row[3]
             tempModel.dates = row[4]
 
-            myList.append(tempModel.toJSON())
+            tempString = json.dumps(tempModel.__dict__)
+            myList.append(tempString)
 
         return myList
 
