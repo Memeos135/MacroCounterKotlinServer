@@ -281,7 +281,12 @@ def getEmails():
     if request.method == 'GET':
         emails = select_email()
         if(len(emails) > 0):
-            return "{ \"emailList\": " + emails.__str__() + "}"
+
+            responseString = "{ \"emailList\": ["
+            for item in emails:
+                responseString += item.encode("utf-8").decode("unicode-escape") + ","
+
+            return responseString
         else:
             return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
     else:
