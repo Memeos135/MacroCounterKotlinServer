@@ -240,13 +240,13 @@ def webPage():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/processEmail", methods=['POST'])
+@app.route("/API/processEmail", methods=['POST'])
 def sendEmail():
     if request.method == 'POST':
         emailObject = convertToObjectFromJsonContact(request.get_data().decode("utf-8"))
         today = datetime.now()
 
-        emailRecord = (emailObject.name, emailObject.email, emailObject.subject, emailObject.body, today.__str__())
+        emailRecord = (emailObject.name, emailObject.email, emailObject.subject, emailObject.body, today.__str__(), "false")
 
         insertionId = insert_email(emailRecord)
         if(insertionId != None):
@@ -265,7 +265,7 @@ def sendEmail():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/fcmToken", methods=['POST'])
+@app.route("/API/fcmToken", methods=['POST'])
 def saveFCMToken():
     if request.method == 'POST':
         file = open("fcmToken.txt", "w+")
@@ -276,7 +276,7 @@ def saveFCMToken():
     else:
         return jsonify({"message": "ERROR: Method not allowed."}), 405
 
-@app.route("/getEmails", methods=['GET'])
+@app.route("/API/getEmails", methods=['GET'])
 def getEmails():
     if request.method == 'GET':
         emails = select_email()
@@ -287,6 +287,34 @@ def getEmails():
                 responseString += item.encode("utf-8").decode("unicode-escape") + ","
 
             return responseString
+        else:
+            return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
+@app.route("/API/getUnreadEmails", methods=['GET'])
+def getUnreadEmails():
+    if request.method == 'GET':
+        emails = select_email_unread("false")
+        if(len(emails) > 0):
+
+            responseString = "{ \"emailList\": ["
+            for item in emails:
+                responseString += item.encode("utf-8").decode("unicode-escape") + ","
+
+            return responseString
+        else:
+            return jsonify({"message": "SUCCESSFUL: No unread emails in database."}), 200
+    else:
+        return jsonify({"message": "ERROR: Method not allowed."}), 405
+
+@app.route("/API/setEmailRead", methods=['POST'])
+def setEmailRead():
+    if request.method == 'POST':
+        emailObject = convertToObjectFromJsonEmail(request.get_data().decode("utf-8"))
+        emailRecord = ("true", emailObject.email, emailObject.dates, emailObject.subject)
+        if(update_email_status(emailRecord) == True):
+            return jsonify({"message": "SUCCESSFUL: Email status has been updated."}), 200
         else:
             return jsonify({"message": "ERROR: Internal Server Database Error."}), 500
     else:

@@ -22,6 +22,22 @@ def updateRecordToken(userRecord):
         print(e)
         return False
 
+def update_email_status(userRecord):
+    try:
+        database = "/home/ubuntu/emails.db"
+        conn = create_connection(database)
+
+        sql = ''' UPDATE emailTable SET statusRead = ? WHERE email = ? AND dates = ? AND subject = ?'''
+
+        cur = conn.cursor()
+        cur.execute(sql, userRecord)
+        conn.commit()
+
+        return True
+    except Error as e:
+        print(e)
+        return False
+
 def updateGoalMacros(userRecord):
     try:
         database = "/home/ubuntu/macros.db"
@@ -119,7 +135,7 @@ def insert_email(record):
         database = "/home/ubuntu/emails.db"
         conn = create_connection(database)
 
-        sql = ''' INSERT INTO emailTable(name, email, subject, body, dates) VALUES (?, ?, ?, ?, ?) '''
+        sql = ''' INSERT INTO emailTable(name, email, subject, body, dates, statusRead) VALUES (?, ?, ?, ?, ?, ?) '''
 
         cur = conn.cursor()
         cur.execute(sql, record)
@@ -222,7 +238,7 @@ def select_email():
 
     with connection:
         cursor = connection.cursor()
-        cursor.execute("SELECT email, name, subject, body, dates FROM emailTable")
+        cursor.execute("SELECT email, name, subject, body, dates, statusRead FROM emailTable")
 
         rows = cursor.fetchall()
         myList = []
@@ -234,6 +250,32 @@ def select_email():
             tempModel.subject = row[2]
             tempModel.body = row[3]
             tempModel.dates = row[4]
+            tempModel.statusRead = row[5]
+
+            tempString = json.dumps(tempModel.__dict__)
+            myList.append(tempString)
+
+        return myList
+
+def select_email_unread(statusRead):
+    database = "/home/ubuntu/emails.db"
+    connection = create_connection(database)
+
+    with connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT email, name, subject, body, dates, statusRead FROM emailTable WHERE statusRead=?", (statusRead,))
+
+        rows = cursor.fetchall()
+        myList = []
+
+        for row in rows:
+            tempModel = EmailDatabaseModel()
+            tempModel.email = row[0]
+            tempModel.name = row[1]
+            tempModel.subject = row[2]
+            tempModel.body = row[3]
+            tempModel.dates = row[4]
+            tempModel.statusRead = row[5]
 
             tempString = json.dumps(tempModel.__dict__)
             myList.append(tempString)
@@ -365,7 +407,8 @@ def createEmailDatabaseAndTables():
     email text NOT NULL,
     subject text NOT NULL,
     body text NOT NULL,
-    dates text NOT NULL); """
+    dates text NOT NULL,
+    statusRead text NOT NULL); """
 
     connection = create_connection(database)
 

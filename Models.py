@@ -19,6 +19,7 @@ class EmailDatabaseModel(object):
     subject = ""
     body = ""
     dates = ""
+    statusRead = ""
 
     def toJSON(self):
         return json.dumps(self.__dict__)

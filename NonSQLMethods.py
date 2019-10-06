@@ -13,6 +13,18 @@ def checkDate(token_expiry_unformat):
         return True
     else:
         return False
+        
+def convertToObjectFromJsonEmail(data):
+    email = EmailDatabaseModel()
+    loadedJson = json.loads(data)
+    email.email = loadedJson["email"]
+    email.name = loadedJson["name"]
+    email.subject = loadedJson["subject"]
+    email.body = loadedJson["body"]
+    email.dates = loadedJson["dates"]
+    email.statusRead = loadedJson["statusRead"]
+
+    return email
 
 def convertToObjectFromJsonContact(data):
     contact = ContactCredentials()
