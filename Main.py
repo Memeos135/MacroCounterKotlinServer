@@ -146,7 +146,10 @@ def getDailyProgress():
             # check token expiry date with today's date
             if(checkDate(tokenExpiryDate)):
                 today = datetime.now()
-                getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
+                if(today.month >= 10):
+                    getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-0%m-%d').__str__())
+                else:
+                    getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
 
                 if getProgressInfo != []:
                     fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
