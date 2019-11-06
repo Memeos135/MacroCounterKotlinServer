@@ -38,7 +38,7 @@ def getSpecificDayProgress():
                     fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
                     return fetchData.toJSON()
                 else:
-                    return "{ \"protein_progress\": \"0\", \"carbs_progress\": \"0\", \"fats_progress\": \"0\" }"
+                    return "{ \"protein_progress\": 0, \"carbs_progress\": 0, \"fats_progress\": 0 }"
             else:
                 return jsonify({"message": "ERROR: Token expired."}), 401
         else:
@@ -146,16 +146,13 @@ def getDailyProgress():
             # check token expiry date with today's date
             if(checkDate(tokenExpiryDate)):
                 today = datetime.now()
-                if(today.month >= 10):
-                    getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-0%m-%d').__str__())
-                else:
-                    getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
+                getProgressInfo = select_progress_info(userFetchData, today.strftime('%Y-%m-%d').__str__())
 
                 if getProgressInfo != []:
                     fetchData = FetchData(getProgressInfo[0], getProgressInfo[1], getProgressInfo[2])
                     return fetchData.toJSON()
                 else:
-                    return "{ \"protein_progress\": \"0\", \"carbs_progress\": \"0\", \"fats_progress\": \"0\" }"
+                    return "{ \"protein_progress\": 0, \"carbs_progress\": 0, \"fats_progress\": 0 }"
             else:
                 return jsonify({"message": "ERROR: Token expired."}), 401
         else:
